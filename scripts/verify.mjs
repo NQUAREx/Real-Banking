@@ -1,0 +1,33 @@
+import {chromium} from '@playwright/test';
+import QRCode from 'qrcode';
+import assert from 'node:assert/strict';
+const browser=await chromium.launch({headless:true});
+try{
+const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+const errors=[],logs=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>logs.push(m.text()));
+await page.goto('http://localhost:5173');
+await page.getByRole('heading',{name:'Счета и карты'}).waitFor();
+await page.screenshot({path:'/workspace/real-bank-home.png',fullPage:true});
+assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+await page.getByRole('button',{name:'Платежи',exact:true}).click();
+await page.getByRole('button',{name:'Перевести',exact:true}).click();
+await page.getByLabel('Получатель',{exact:true}).fill('Тестовый получатель');
+await page.getByLabel('Сумма, с',{exact:true}).fill('100,25');
+await page.getByRole('button',{name:'Продолжить'}).click();
+await page.getByRole('button',{name:'Подтвердить перевод'}).click();
+await page.getByRole('heading',{name:'Готово!'}).waitFor();
+assert(logs.some(l=>l.includes('Transfer stub')));
+await page.getByRole('button',{name:'На главную'}).click();
+await page.getByRole('button',{name:'Сканировать QR',exact:true}).click();
+await page.locator('.scanner').waitFor();
+await QRCode.toFile('/tmp/real-bank-test-qr.png',JSON.stringify({recipient:'Кофейня',amount:150,account:'DEMO-TEST'}));
+await page.locator('input[type=file]').setInputFiles('/tmp/real-bank-test-qr.png');
+await page.getByRole('heading',{name:'Оплата по QR'}).waitFor();
+assert.equal(await page.getByLabel('Получатель',{exact:true}).inputValue(),'Кофейня');
+assert.equal(await page.getByLabel('Сумма, с',{exact:true}).inputValue(),'150');
+assert(logs.some(l=>l.includes('QR scanned')));
+await page.getByRole('button',{name:'Продолжить'}).click();
+await page.screenshot({path:'/workspace/real-bank-review.png',fullPage:true});
+assert.deepEqual(errors,[]);
+console.log('PASS: mobile layout, transfer confirmation, QR image decoding and console stubs');
+}finally{await browser.close();}
