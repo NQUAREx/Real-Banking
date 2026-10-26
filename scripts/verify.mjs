@@ -6,11 +6,14 @@ try{
 const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
 const errors=[],logs=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>logs.push(m.text()));
 await page.goto('http://localhost:5173');
+await page.getByRole('button',{name:'Мой банк Счета и карты'}).waitFor();
+await page.getByRole('button',{name:'Мой банк Счета и карты'}).click();
 await page.getByRole('heading',{name:'Счета и карты'}).waitFor();
 await page.screenshot({path:'/workspace/real-bank-home.png',fullPage:true});
 assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
 await page.getByRole('button',{name:'Платежи',exact:true}).click();
-await page.getByRole('button',{name:'Перевести',exact:true}).click();
+await page.getByRole('button',{name:'Переводы',exact:true}).click();
+await page.getByRole('button',{name:'Клиенту MBANK',exact:true}).click();
 await page.getByLabel('Получатель',{exact:true}).fill('Тестовый получатель');
 await page.getByLabel('Сумма, с',{exact:true}).fill('100,25');
 await page.getByRole('button',{name:'Продолжить'}).click();
